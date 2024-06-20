@@ -1,9 +1,12 @@
 export class VariableListener {
+  // Our variable
   #_value = null;
-  #_emitterCount = 0; // Amount of times a value change will be emitted to every subscriber (1 for many subscribers).
-  #_subscribers = new Set(); // Storage for our subscribers' callback.
+  // Storage to hold each subscribers' callback (logic to execute on change if subscribed).
+  #_subscribers = new Set();
+  // Amount of times a value change will be emitted to every subscriber (1 for many subscribers).
+  #_emitterCount = 0;
+  // Total amount of times all subscribers got notified combined.
   #_totalSubscriberNotifications = 0;
-
   constructor(value) {
     this.#_value = value;
   }
@@ -11,7 +14,7 @@ export class VariableListener {
   set value(val) {
     this.#_value = val;
 
-    // Only emit a change if we have at least one subscriber for the value change
+    // Only emit a change if we have at least one subscriber listening for changes
     if (this.#_subscribers.size > 0) {
       this.#_emitChange();
     }
@@ -30,26 +33,35 @@ export class VariableListener {
   }
 
   subscribe(callback) {
-    // Only invoke callback the next time
-    if (this.#_subscribers.has(callback)) {
-      callback(this.#_value);
+    if (callback instanceof Function) {
+      if (this.#_subscribers.has(callback)) {
+        console.error('The callback passed as argument is already in the subscribers Set');
+        return;
+      }
+      this.#_subscribers.add(callback);
+    } else {
+      console.error('Argument must be a callback function');
+      return;
     }
-    this.#_subscribers.add(callback);
   }
 
   unsubscribe(callback) {
     // Find the callback function in the Set and delete it so it can't be invoked on the same subscriber.
     const callbackExists = this.#_subscribers.delete(callback);
     if (!callbackExists) {
-      console.error('Attempted to delete a callback that does not exist');
+      console.error('Attempted to delete entry that does not exist in the subscribers Set');
     }
   }
 
   #_emitChange() {
     this.#_subscribers.forEach((callback) => {
+      // Keep track of amount of subscribers we are notifying:
       this.#_totalSubscriberNotifications += 1;
-      return callback(this.#_value);
+      // Invoke the callback with the value as argument.
+      callback(this.#_value);
     });
+
+    // Value change got emitted:
     this.#_emitterCount += 1;
   }
 }
