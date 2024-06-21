@@ -33,23 +33,32 @@ export class VariableListener {
   }
 
   subscribe(callback) {
-    if (callback instanceof Function) {
-      if (this.#_subscribers.has(callback)) {
-        console.error('The callback passed as argument is already in the subscribers Set');
-        return;
+    try {
+      // Must be a Function type.
+      if (!(callback instanceof Function)) {
+        throw new TypeError('Argument must be a function');
       }
+      // Can not be an anonymous function (when unsubscribing, we need the callback reference).
+      if (!callback.name) {
+        throw new TypeError('Argument can not be an anonymous funtion.');
+      }
+      // Can not already exist.
+      if (this.#_subscribers.has(callback)) {
+        throw new Error('The function is already attached to a subscriber.');
+      }
+
       this.#_subscribers.add(callback);
-    } else {
-      console.error('Argument must be a callback function');
-      return;
+    } catch (exception) {
+      throw Error(exception);
     }
   }
 
   unsubscribe(callback) {
-    // Find the callback function in the Set and delete it so it can't be invoked on the same subscriber.
+    // Find and delete the callback or throw an error if it could not be found.
     const callbackExists = this.#_subscribers.delete(callback);
     if (!callbackExists) {
-      console.error('Attempted to delete entry that does not exist in the subscribers Set');
+      // Does not necessarily break stuff, but to keep things clean we will throw an error.
+      throw new Error('Attempted to delete entry that does not exist in the subscribers set');
     }
   }
 
