@@ -15,13 +15,18 @@ const callback1 = (response) => {
   console.log('callback1: ', response);
 };
 
-myListener.subscribe(callback1);
-myListener.subscribe((response) => {
-  console.log('callback2: ', response);
-});
+myListener.subscribe(callback1).updateEvery(7000);
 
-myListener.value = 123; // 123, 123
-myListener.unsubscribe(callback1);
+myListener.value = 1;
+
+setInterval(() => {
+  myListener.value = myListener.value += 1;
+  console.log(myListener.value);
+}, 500);
+
+setTimeout(() => {
+  myListener.unsubscribe(callback1);
+}, 23000);
 
 // Usage example:
 // let listener1 = new VariableListener('test');

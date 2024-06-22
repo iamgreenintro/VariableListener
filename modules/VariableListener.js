@@ -1,3 +1,6 @@
+// TODO:
+// * Add ability to only emit the value every x amount of ms (if it has changed).
+
 export class VariableListener {
   // Our variable
   #_value = null;
@@ -7,6 +10,9 @@ export class VariableListener {
   #_emitterCount = 0;
   // Total amount of times all subscribers got notified combined.
   #_totalSubscriberNotifications = 0;
+  // Keep track of individual timed listeners in case any unsubscribe we need to clear the interval and callback
+  #_intervalInstances = new Set();
+
   constructor(value) {
     this.#_value = value;
   }
@@ -32,6 +38,7 @@ export class VariableListener {
     return this.#_totalSubscriberNotifications;
   }
 
+  //
   subscribe(callback) {
     try {
       // Must be a Function type.
@@ -48,29 +55,69 @@ export class VariableListener {
       }
 
       this.#_subscribers.add(callback);
+
+      // Keep a reference to this class for scoping.
+      const self = this;
+
+      // Allow the subscriber to invoke the callback every x amount of ms.
+      return {
+        updateEvery(ms) {
+          const intervalInstance = setInterval(() => {
+            callback(self.#_value);
+          }, ms);
+
+          self.#_intervalInstances.add({
+            interval: intervalInstance,
+            callback: callback,
+          });
+        },
+      };
     } catch (exception) {
       throw Error(exception);
     }
   }
 
   unsubscribe(callback) {
+    // Clear interval reference that has been set for the specified callback:
+    this.#_intervalRemover(callback);
+
     // Find and delete the callback or throw an error if it could not be found.
     const callbackExists = this.#_subscribers.delete(callback);
     if (!callbackExists) {
       // Does not necessarily break stuff, but to keep things clean we will throw an error.
-      throw new Error('Attempted to delete entry that does not exist in the subscribers set');
+      throw new Error('Attempted to delete an entry that does not exist in the subscribers set');
     }
   }
 
   #_emitChange() {
     this.#_subscribers.forEach((callback) => {
+      // Only invoke the callback with the value as argument when it's not already getting called from an interval.
+      if (!this.#_hasIntervalAttached(callback)) {
+        callback(this.#_value);
+      }
       // Keep track of amount of subscribers we are notifying:
       this.#_totalSubscriberNotifications += 1;
-      // Invoke the callback with the value as argument.
-      callback(this.#_value);
     });
 
     // Value change got emitted:
     this.#_emitterCount += 1;
+  }
+
+  #_intervalRemover(callbackFn) {
+    for (const entry of this.#_intervalInstances) {
+      if (entry.callback === callbackFn) {
+        clearInterval(entry.interval);
+        this.#_intervalInstances.delete(entry);
+      }
+    }
+  }
+
+  #_hasIntervalAttached(callbackFn) {
+    for (const entry of this.#_intervalInstances) {
+      if (entry.callback === callbackFn) {
+        return true;
+      }
+    }
+    return false;
   }
 }
