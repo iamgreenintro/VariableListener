@@ -5,9 +5,9 @@ export class VariableListener {
   #_value = null;
   // Storage to hold each subscribers' callback (logic to execute on change if subscribed).
   #_subscribers = new Set();
-  // Amount of times a value change will be emitted to every subscriber (1 for many subscribers).
-  #_emitterCount = 0;
-  // Total amount of times all subscribers got notified combined.
+  // Amount of times a value has changed.
+  #_valueChangeCount = 0;
+  // Combined amount of notifications sent to all subscribers.
   #_totalSubscriberNotifications = 0;
   // Keep track of individual timed listeners in case any unsubscribe we need to clear the interval and callback
   #_intervalInstances = new Set();
@@ -29,8 +29,8 @@ export class VariableListener {
     return this.#_value;
   }
 
-  get emitterCount() {
-    return this.#_emitterCount;
+  get valueChangeCount() {
+    return this.#_valueChangeCount;
   }
 
   get totalSubscriberNotifications() {
@@ -100,8 +100,8 @@ export class VariableListener {
       }
     });
 
-    // Value change got emitted:
-    this.#_emitterCount += 1;
+    // Increase the amount of times we changed the value:
+    this.#_valueChangeCount += 1;
   }
 
   #_intervalRemover(callbackFn) {
