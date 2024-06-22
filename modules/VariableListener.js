@@ -1,5 +1,4 @@
 // TODO:
-// * Add ability to only emit the value every x amount of ms (if it has changed).
 
 export class VariableListener {
   // Our variable
@@ -63,6 +62,8 @@ export class VariableListener {
       return {
         updateEvery(ms) {
           const intervalInstance = setInterval(() => {
+            // Keep track of amount of subscribers we are notifying:
+            self.#_totalSubscriberNotifications += 1;
             callback(self.#_value);
           }, ms);
 
@@ -93,10 +94,10 @@ export class VariableListener {
     this.#_subscribers.forEach((callback) => {
       // Only invoke the callback with the value as argument when it's not already getting called from an interval.
       if (!this.#_hasIntervalAttached(callback)) {
+        // Keep track of amount of subscribers we are notifying:
+        this.#_totalSubscriberNotifications += 1;
         callback(this.#_value);
       }
-      // Keep track of amount of subscribers we are notifying:
-      this.#_totalSubscriberNotifications += 1;
     });
 
     // Value change got emitted:
